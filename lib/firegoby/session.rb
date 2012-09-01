@@ -1,3 +1,4 @@
+require "flickr"
 require "launchy"
 
 class Firegoby::Session
