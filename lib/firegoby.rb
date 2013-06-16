@@ -1,9 +1,13 @@
 #!/usr/bin/env ruby
 
+$LOAD_PATH.push('.')
+
 require 'flickr'
 require 'yaml'
 require 'thread'
+require 'mini_exiftool'
 require 'optparse'
+require 'launchy'
 
 class Firegoby
   PRIVACY_PUBLIC            = {:is_public => true,  :is_family => false, :is_friend => false}
@@ -85,6 +89,8 @@ class Firegoby
           r = 0 if fo.enqueue(path) > 0 && fo.queue_length > 0
         end
       end
+      r = 0 if fo.enqueue_basedir(base) > 0 && fo.queue_length > 0
+
       sleep WAIT_TICK
       if t.status == 'sleep' && fo.queue_length < 1
         r += 1
@@ -109,6 +115,28 @@ class Firegoby
     @remove          = opts[:remove]
   end
 
+  def enqueue_basedir(dir)
+    queued        = 0
+    Dir::entries(dir).keep_if {|x| x.downcase.end_with?('.jpg') || x.downcase.end_with?('.jpeg') }.each do |f|
+      path = "#{dir}/#{f}"
+      exif = MiniExiftool.new path
+
+      if exif.create_date.nil? || exif.create_date == '--'
+        photoset = File.ctime(path).strftime('%b %Y')
+      else
+        photoset = exif.create_date.strftime('%b %Y')
+      end
+
+      enqueue_task(:upload_photo, {
+          :photoset_title => photoset,
+          :file => path,
+      })
+      @queued_files[path] = true
+      queued += 1
+    end
+    queued
+  end
+
   def enqueue(dir)
     queued        = 0
     basepath      = File.expand_path(dir)
@@ -124,6 +152,7 @@ class Firegoby
       @queued_files[path] = true
       queued += 1
     end
+
     queued
   end
 
@@ -142,13 +171,13 @@ class Firegoby
   end
 
   protected
-    def photoset_by_name(name, primary_photo_id_candidate)
+    def photoset_by_name(name, primary_photo_id)
       return @queued_photoset[name] if @queued_photoset.key?(name)
       photosets.each do |p|
         return p.id, false if p.title == name
       end
-      puts "Create photoset: [#{name} with Photo Id: #{primary_photo_id_candidate}]"
-      ps = flickr.photosets.create(name, primary_photo_id_candidate)
+      puts "Create photoset: [#{name} with Photo Id: #{primary_photo_id}]"
+      ps = flickr.photosets.create(name, primary_photo_id)
       @queued_photoset[name] = ps.id
       return ps.id, true
     end
@@ -209,6 +238,39 @@ class Firegoby
       end
       @photosets
     end
+
+  def api_key
+    'c9ff9c9a49ec22663219d4848aa3e4a3'
+  end
+
+  def api_secret
+    '2d87172f8a72d07c'
+  end
+
+  def flickr
+    if @flickr.nil?
+      @flickr = Flickr.new(token_file, api_key, api_secret)
+      auth_token
+    end
+    @flickr
+  end
+
+  def token_file
+    "#{ENV['HOME']}/.flickr_firegoby"
+  end
+
+  def auth_token
+    unless @flickr.auth.token
+      Launchy.open(@flickr.auth.login_link)
+      STDIN.gets
+      @flickr.auth.getToken
+      @flickr.auth.cache_token
+    end
+  end
+
+  def method_missing(method, *args)
+    flickr.send(method, *args)
+  end
 end
 
 Firegoby.run(ARGV)

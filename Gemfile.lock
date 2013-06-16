@@ -4,6 +4,9 @@ GEM
     addressable (2.3.4)
     launchy (2.3.0)
       addressable (~> 2.3)
+    mime (0.1)
+    mime-types (1.23)
+    mini_exiftool (1.6.0)
 
 PLATFORMS
   java
@@ -11,3 +14,6 @@ PLATFORMS
 
 DEPENDENCIES
   launchy
+  mime
+  mime-types
+  mini_exiftool
