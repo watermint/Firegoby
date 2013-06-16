@@ -2,15 +2,15 @@ class Firegoby::Uploader
   PRIVACY_PUBLIC            = {:is_public => true,  :is_family => false, :is_friend => false}
   PRIVACY_FRIEND            = {:is_public => false, :is_family => false, :is_friend => true}
   PRIVACY_FAMILY            = {:is_public => false, :is_family => true,  :is_friend => false}
-  PRIVACY_FRIEND_AND_FAMLIY = {:is_public => false, :is_family => true,  :is_friend => true}
+  PRIVACY_FRIEND_AND_FAMILY = {:is_public => false, :is_family => true,  :is_friend => true}
   PRIVACY_PRIVATE           = {:is_public => false, :is_family => false, :is_friend => false}
   PRIVACY = {
-    "PUBLIC"            => PRIVACY_PUBLIC,
-    "FRIEND"            => PRIVACY_FRIEND,
-    "FAMILY"            => PRIVACY_FAMILY,
-    "FRIEND_AND_FAMILY" => PRIVACY_FRIEND_AND_FAMLIY,
-    "FAMILY_AND_FRIEND" => PRIVACY_FRIEND_AND_FAMLIY,
-    "PRIVATE"           => PRIVACY_PRIVATE,
+    'PUBLIC' => PRIVACY_PUBLIC,
+    'FRIEND' => PRIVACY_FRIEND,
+    'FAMILY' => PRIVACY_FAMILY,
+    'FRIEND_AND_FAMILY' => PRIVACY_FRIEND_AND_FAMILY,
+    'FAMILY_AND_FRIEND' => PRIVACY_FRIEND_AND_FAMILY,
+    'PRIVATE' => PRIVACY_PRIVATE,
   }
   WAIT_TICK = 5
 
@@ -60,10 +60,10 @@ class Firegoby::Uploader
         end
       end
       sleep WAIT_TICK
-      if t.status == 'sleep' && queue_length < 1 then
+      if t.status == 'sleep' && queue_length < 1
         r += 1
-        if r > r_max then
-          puts "Stop monitoring. Exit."
+        if r > r_max
+          puts 'Stop monitoring. Exit.'
           exit
         end
       end
@@ -72,11 +72,13 @@ class Firegoby::Uploader
 
   def run_queue
     Thread.start do
-      while task = @queue.pop
+      while (task = @queue.pop)
         puts task
         case task[:task]
         when :upload_photo
           task_upload_photo task[:opts]
+        else
+          # nop
         end
       end
     end
@@ -111,7 +113,7 @@ class Firegoby::Uploader
         elsif retries < 100 then
           sleep 30
         else
-          raise "Failed to upload photo"
+          raise 'Failed to upload photo'
         end
         puts "#{e}: Retry upload.. #{retries}"
         retry
@@ -143,7 +145,6 @@ class Firegoby::Uploader
       end
       false
     end
-
 
     def photosets
       if @photosets.nil? then

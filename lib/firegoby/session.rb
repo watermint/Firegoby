@@ -1,5 +1,5 @@
-require "flickr"
-require "launchy"
+require 'flickr'
+require 'launchy'
 
 class Firegoby::Session
   def api_key
@@ -11,7 +11,7 @@ class Firegoby::Session
   end
 
   def flickr
-    if @flickr.nil? then
+    if @flickr.nil?
       @flickr = Flickr.new(token_file, api_key, api_secret)
       auth_token
     end

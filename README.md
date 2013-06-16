@@ -3,6 +3,8 @@ Firegoby
 
 Ruby based flickr tools
 
+* Using library [rflickr](http://rubyforge.org/projects/rflickr/)
+
 License
 =======
 

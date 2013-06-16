@@ -1,23 +1,23 @@
 #!/usr/bin/env ruby
 
-require "flickr"
-require "yaml"
-require "thread"
-require "optparse"
+require 'flickr'
+require 'yaml'
+require 'thread'
+require 'optparse'
 
 class Firegoby
   PRIVACY_PUBLIC            = {:is_public => true,  :is_family => false, :is_friend => false}
   PRIVACY_FRIEND            = {:is_public => false, :is_family => false, :is_friend => true}
   PRIVACY_FAMILY            = {:is_public => false, :is_family => true,  :is_friend => false}
-  PRIVACY_FRIEND_AND_FAMLIY = {:is_public => false, :is_family => true,  :is_friend => true}
+  PRIVACY_FRIEND_AND_FAMILY = {:is_public => false, :is_family => true,  :is_friend => true}
   PRIVACY_PRIVATE           = {:is_public => false, :is_family => false, :is_friend => false}
   PRIVACY = {
-    "PUBLIC"            => PRIVACY_PUBLIC,
-    "FRIEND"            => PRIVACY_FRIEND,
-    "FAMILY"            => PRIVACY_FAMILY,
-    "FRIEND_AND_FAMILY" => PRIVACY_FRIEND_AND_FAMLIY,
-    "FAMILY_AND_FRIEND" => PRIVACY_FRIEND_AND_FAMLIY,
-    "PRIVATE"           => PRIVACY_PRIVATE,
+    'PUBLIC' => PRIVACY_PUBLIC,
+    'FRIEND' => PRIVACY_FRIEND,
+    'FAMILY' => PRIVACY_FAMILY,
+    'FRIEND_AND_FAMILY' => PRIVACY_FRIEND_AND_FAMILY,
+    'FAMILY_AND_FRIEND' => PRIVACY_FRIEND_AND_FAMILY,
+    'PRIVATE' => PRIVACY_PRIVATE,
   }
   WAIT_TICK = 5
 
@@ -29,42 +29,42 @@ class Firegoby
     remove  = false
 
     opts = OptionParser.new do |opts|
-      opts.banner = "Usage: firegoby.rb [options]"
-      opts.separator ""
-      opts.separator "Required options:"
+      opts.banner = 'Usage: firegoby.rb [options]'
+      opts.separator ''
+      opts.separator 'Required options:'
 
-      opts.on("-b", "--base BASE_DIR", "Base directory") do |b|
+      opts.on('-b', '--base BASE_DIR', 'Base directory') do |b|
         base = b
       end
 
-      opts.separator ""
-      opts.separator "Specific options:"
-      opts.on("-r", "--remove", "Remove after upload") do |r|
+      opts.separator ''
+      opts.separator 'Specific options:'
+      opts.on('-r', '--remove', 'Remove after upload') do |r|
         remove = r
       end
-      opts.on("-p", "--privacy PRIVACY", "Privacy settings: " + PRIVACY.keys.join(", ")) do |p|
-        unless PRIVACY.key?(p.upcase) then
+      opts.on('-p', '--privacy PRIVACY', 'Privacy settings: ' + PRIVACY.keys.join(", ")) do |p|
+        unless PRIVACY.key?(p.upcase)
           puts "Invalid privacy option: #{p}"
           puts opts
           exit
         end
         privacy = PRIVACY[p.upcase]
       end
-      opts.on("-t", "--tags TAGS", "Tags") do |t|
+      opts.on('-t', '--tags TAGS', 'Tags') do |t|
         tags = t
       end
-      opts.on("-w", "--wait SECONDS", "Maximum wait for shutdown") do |w|
+      opts.on('-w', '--wait SECONDS', 'Maximum wait for shutdown') do |w|
         wait = w.to_i
       end
-      opts.separator ""
-      opts.separator "Common options:"
-      opts.on_tail("-h", "--help", "Show this message") do
+      opts.separator ''
+      opts.separator 'Common options:'
+      opts.on_tail('-h', '--help', 'Show this message') do
         puts opts
         exit
       end
     end
     opts.parse!(args)
-    if base.nil? then
+    if base.nil?
       puts opts
       exit
     end
@@ -86,10 +86,10 @@ class Firegoby
         end
       end
       sleep WAIT_TICK
-      if t.status == 'sleep' && fo.queue_length < 1 then
+      if t.status == 'sleep' && fo.queue_length < 1
         r += 1
-        if r > r_max then
-          puts "Stop monitoring. Exit."
+        if r > r_max
+          puts 'Stop monitoring. Exit.'
           exit
         end
       end
@@ -129,11 +129,13 @@ class Firegoby
 
   def run_queue
     Thread.start do
-      while task = @queue.pop
+      while (task = @queue.pop)
         puts task
         case task[:task]
         when :upload_photo
           task_upload_photo task[:opts]
+        else
+          # nop
         end
       end
     end
@@ -168,7 +170,7 @@ class Firegoby
         elsif retries < 100 then
           sleep 30
         else
-          raise "Failed to upload photo"
+          raise 'Failed to upload photo'
         end
         puts "#{e}: Retry upload.. #{retries}"
         retry
@@ -200,7 +202,6 @@ class Firegoby
       end
       false
     end
-
 
     def photosets
       if @photosets.nil? then
