@@ -115,24 +115,38 @@ class Firegoby
     @remove          = opts[:remove]
   end
 
+  def define_photoset(path)
+    begin
+      exif = MiniExiftool.new path
+
+      if exif.create_date.nil? || exif.create_date == '--'
+        File.ctime(path).strftime('%b %Y')
+      else
+        exif.create_date.strftime('%b %Y')
+      end
+    rescue
+      begin
+        File.ctime(path).strftime('%b %Y')
+      rescue
+        nil
+      end
+    end
+  end
+
   def enqueue_basedir(dir)
     queued        = 0
     Dir::entries(dir).keep_if {|x| x.downcase.end_with?('.jpg') || x.downcase.end_with?('.jpeg') }.each do |f|
       path = "#{dir}/#{f}"
-      exif = MiniExiftool.new path
+      photoset = define_photoset(path)
 
-      if exif.create_date.nil? || exif.create_date == '--'
-        photoset = File.ctime(path).strftime('%b %Y')
-      else
-        photoset = exif.create_date.strftime('%b %Y')
+      unless photoset.nil?
+        enqueue_task(:upload_photo, {
+            :photoset_title => photoset,
+            :file => path,
+        })
+        @queued_files[path] = true
+        queued += 1
       end
-
-      enqueue_task(:upload_photo, {
-          :photoset_title => photoset,
-          :file => path,
-      })
-      @queued_files[path] = true
-      queued += 1
     end
     queued
   end
@@ -185,6 +199,7 @@ class Firegoby
     def task_upload_photo(opts)
       retries  = 0
       photo_id = nil
+      return unless File.exist?(opts[:file])
       begin
         puts "Upload: #{opts[:file]}"
         photo_id    = flickr.photos.upload.upload_file(opts[:file], nil, nil, @tags, @privacy[:is_public], @privacy[:is_friend], @privacy[:is_family]) if photo_id.nil?
@@ -201,7 +216,7 @@ class Firegoby
         else
           raise 'Failed to upload photo'
         end
-        puts "#{e}: Retry upload.. #{retries}"
+        puts "#{e} #{e.backtrace.join(', ')}: Retry upload.. #{retries}"
         retry
       end
       photo_id

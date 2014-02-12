@@ -1,3 +1,5 @@
+# coding: utf-8
+
 require 'flickr/base'
 require 'mime/types'
 require 'net/http'
@@ -93,7 +95,7 @@ class Flickr::Upload < Flickr::APIBase
 		parts << Flickr::FormPart.new('api_sig',sig)
 
 		parts << Flickr::FormPart.new('photo',data,mimetype)
-		parts.last.attributes['filename'] = filename
+		parts.last.attributes['filename'] = filename.gsub(/[一-龠]/, 'X')
 		return parts
 	end
 
