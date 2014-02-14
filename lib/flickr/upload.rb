@@ -95,7 +95,7 @@ class Flickr::Upload < Flickr::APIBase
 		parts << Flickr::FormPart.new('api_sig',sig)
 
 		parts << Flickr::FormPart.new('photo',data,mimetype)
-		parts.last.attributes['filename'] = filename.gsub(/[一-龠]/, 'X')
+		parts.last.attributes['filename'] = filename.gsub(/[^\u0000-\u007f]/, '_')
 		return parts
 	end
 
