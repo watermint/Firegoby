@@ -120,13 +120,13 @@ class Firegoby
       exif = MiniExiftool.new path
 
       if exif.create_date.nil? || exif.create_date == '--'
-        File.ctime(path).strftime('%b %Y')
+        File.ctime(path).strftime('%Y-%m')
       else
-        exif.create_date.strftime('%b %Y')
+        exif.create_date.strftime('%Y-%m')
       end
     rescue
       begin
-        File.ctime(path).strftime('%b %Y')
+        File.ctime(path).strftime('%Y-%m')
       rescue
         nil
       end
