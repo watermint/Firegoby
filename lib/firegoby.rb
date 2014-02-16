@@ -157,7 +157,7 @@ class Firegoby
     photoset_name = photoset_name_from_directory(dir)
     Dir::entries(dir).delete_if {|x| x.start_with?('.') }.each do |f|
       path = "#{basepath}/#{f}"
-      next unless File.exist?(path)
+      next unless File.size?(path)
       next if @queued_files.key?(path)
       enqueue_task(:upload_photo, {
         :photoset_title => photoset_name,
@@ -199,7 +199,7 @@ class Firegoby
     def task_upload_photo(opts)
       retries  = 0
       photo_id = nil
-      return unless File.exist?(opts[:file])
+      return unless File.size?(opts[:file])
       begin
         puts "Upload: #{opts[:file]}"
         photo_id    = flickr.photos.upload.upload_file(opts[:file], nil, nil, @tags, @privacy[:is_public], @privacy[:is_friend], @privacy[:is_family]) if photo_id.nil?
