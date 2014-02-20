@@ -135,7 +135,10 @@ class Firegoby
 
   def enqueue_basedir(dir)
     queued        = 0
-    Dir::entries(dir).keep_if {|x| x.downcase.end_with?('.jpg') || x.downcase.end_with?('.jpeg') }.each do |f|
+    Dir::entries(dir).
+        delete_if {|x| x.start_with?('.') }.
+        keep_if {|x| x.downcase.end_with?('.jpg') || x.downcase.end_with?('.jpeg') }.
+        each do |f|
       path = "#{dir}/#{f}"
       photoset = define_photoset(path)
 
