@@ -112,6 +112,7 @@ class Firegoby
     @queue           = Queue.new
     @queued_photoset = {}
     @queued_files    = {}
+    @upload_count    = 0
     @privacy         = opts[:privacy]
     @tags            = opts[:tags]
     @remove          = opts[:remove]
@@ -207,7 +208,7 @@ class Firegoby
       photo_id = nil
       return unless File.size?(opts[:file])
       begin
-        puts "Uploading: #{opts[:file]}"
+        puts "Uploading[#{@upload_count}]: #{opts[:file]}"
         photo_id    = flickr.photos.upload.upload_file(opts[:file], nil, nil, @tags, @privacy[:is_public], @privacy[:is_friend], @privacy[:is_family]) if photo_id.nil?
         photoset_id, created = photoset_by_name(opts[:photoset_title], photo_id)
         puts "Insert photo into Photoset [Id: #{photoset_id}, Title: #{opts[:photoset_title]}]: Photo[Id: #{photo_id}, File: #{opts[:file]}]"
@@ -217,14 +218,14 @@ class Firegoby
         retries += 1
         if retries < 10 then
           sleep 3
-        elsif retries < 100 then
-          sleep 30
         else
-          raise 'Failed to upload photo'
+          puts "Givin up on upload due to #{e}: #{opts[:file]} skipped."
+          return
         end
         puts "#{e} #{e.backtrace.join(', ')}: Retry upload.. #{retries}"
         retry
       end
+      @upload_count += 1
       photo_id
     end
 
