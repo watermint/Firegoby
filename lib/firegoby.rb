@@ -83,13 +83,15 @@ class Firegoby
     r_max = wait / WAIT_TICK
 
     while true
-      Dir::entries(base).delete_if {|x| x.start_with?('.')}.each do |e|
-        path = "#{base}/#{e}"
-        if File.directory?(path) then
-          r = 0 if fo.enqueue(path) > 0 && fo.queue_length > 0
+      if fo.queue_length < 1
+        Dir::entries(base).delete_if {|x| x.start_with?('.')}.each do |e|
+          path = "#{base}/#{e}"
+          if File.directory?(path) then
+            r = 0 if fo.enqueue(path) > 0
+          end
         end
+        r = 0 if fo.enqueue_basedir(base) > 0
       end
-      r = 0 if fo.enqueue_basedir(base) > 0 && fo.queue_length > 0
 
       sleep WAIT_TICK
       if t.status == 'sleep' && fo.queue_length < 1
@@ -138,6 +140,7 @@ class Firegoby
     Dir::entries(dir).
         delete_if {|x| x.start_with?('.') }.
         keep_if {|x| x.downcase.end_with?('.jpg') || x.downcase.end_with?('.jpeg') }.
+        sort.
         each do |f|
       path = "#{dir}/#{f}"
       photoset = define_photoset(path)
@@ -204,7 +207,7 @@ class Firegoby
       photo_id = nil
       return unless File.size?(opts[:file])
       begin
-        puts "Upload: #{opts[:file]}"
+        puts "Uploading: #{opts[:file]}"
         photo_id    = flickr.photos.upload.upload_file(opts[:file], nil, nil, @tags, @privacy[:is_public], @privacy[:is_friend], @privacy[:is_family]) if photo_id.nil?
         photoset_id, created = photoset_by_name(opts[:photoset_title], photo_id)
         puts "Insert photo into Photoset [Id: #{photoset_id}, Title: #{opts[:photoset_title]}]: Photo[Id: #{photo_id}, File: #{opts[:file]}]"
