@@ -31,6 +31,7 @@ class Firegoby
     wait    = 60
     privacy = PRIVACY_PRIVATE
     remove  = false
+    concurrency = 1
 
     opts = OptionParser.new do |opts|
       opts.banner = 'Usage: firegoby.rb [options]'
@@ -60,6 +61,9 @@ class Firegoby
       opts.on('-w', '--wait SECONDS', 'Maximum wait for shutdown') do |w|
         wait = w.to_i
       end
+      opts.on('-c', '--concurrency CONCURRENCY', 'Number of threads') do |c|
+        concurrency = c.to_i
+      end
       opts.separator ''
       opts.separator 'Common options:'
       opts.on_tail('-h', '--help', 'Show this message') do
@@ -73,30 +77,34 @@ class Firegoby
       exit
     end
 
-    fo    = Firegoby.new({
+    firegoby = Firegoby.new({
       :privacy => privacy,
       :tags    => tags,
       :remove  => remove,
       })
-    t     = fo.run_queue
-    r     = 0
-    r_max = wait / WAIT_TICK
+
+    threads = []
+    (1..concurrency).each do |i|
+      threads << firegoby.run_queue
+    end
+    no_task_count = 0
+    no_task_wait_count = wait / WAIT_TICK
 
     while true
-      if fo.queue_length < 1
+      if firegoby.queue_length < 1
         Dir::entries(base).delete_if {|x| x.start_with?('.')}.each do |e|
           path = "#{base}/#{e}"
           if File.directory?(path) then
-            r = 0 if fo.enqueue(path) > 0
+            no_task_count = 0 if firegoby.enqueue(path) > 0
           end
         end
-        r = 0 if fo.enqueue_basedir(base) > 0
+        no_task_count = 0 if firegoby.enqueue_basedir(base) > 0
       end
 
       sleep WAIT_TICK
-      if t.status == 'sleep' && fo.queue_length < 1
-        r += 1
-        if r > r_max
+      if threads.all? {|t| t.status == 'sleep' } && firegoby.queue_length < 1
+        no_task_count += 1
+        if no_task_count > no_task_wait_count
           puts 'Stop monitoring. Exit.'
           exit
         end
@@ -116,6 +124,9 @@ class Firegoby
     @privacy         = opts[:privacy]
     @tags            = opts[:tags]
     @remove          = opts[:remove]
+    @photoset_list_mutex   = Mutex::new
+    @photoset_create_mutex = Mutex::new
+    @auth_mutex            = Mutex::new
   end
 
   def define_photoset(path)
@@ -193,14 +204,16 @@ class Firegoby
 
   protected
     def photoset_by_name(name, primary_photo_id)
-      return @queued_photoset[name] if @queued_photoset.key?(name)
-      photosets.each do |p|
-        return p.id, false if p.title == name
+      @photoset_create_mutex.synchronize do
+        return @queued_photoset[name] if @queued_photoset.key?(name)
+        photosets.each do |p|
+          return p.id, false if p.title == name
+        end
+        puts "Create photoset: [#{name} with Photo Id: #{primary_photo_id}]"
+        ps = flickr.photosets.create(name, primary_photo_id)
+        @queued_photoset[name] = ps.id
+        return ps.id, true
       end
-      puts "Create photoset: [#{name} with Photo Id: #{primary_photo_id}]"
-      ps = flickr.photosets.create(name, primary_photo_id)
-      @queued_photoset[name] = ps.id
-      return ps.id, true
     end
 
     def task_upload_photo(opts)
@@ -211,8 +224,12 @@ class Firegoby
         puts "Uploading[#{@upload_count}]: #{opts[:file]}"
         photo_id    = flickr.photos.upload.upload_file(opts[:file], nil, nil, @tags, @privacy[:is_public], @privacy[:is_friend], @privacy[:is_family]) if photo_id.nil?
         photoset_id, created = photoset_by_name(opts[:photoset_title], photo_id)
-        puts "Insert photo into Photoset [Id: #{photoset_id}, Title: #{opts[:photoset_title]}]: Photo[Id: #{photo_id}, File: #{opts[:file]}]"
-        flickr.photosets.addPhoto(photoset_id, photo_id) unless created
+        begin
+          puts "Insert photo into Photoset [Id: #{photoset_id}, Title: #{opts[:photoset_title]}]: Photo[Id: #{photo_id}, File: #{opts[:file]}]"
+          flickr.photosets.addPhoto(photoset_id, photo_id) unless created
+        rescue Exception => e
+          puts "#{e} #{e.backtrace.join(', ')}: Failed to insert photo #{opts[:file]} into photoset #{opts[:photoset_title]}"
+        end
         File.unlink(opts[:file]) if @remove
       rescue Exception => e
         retries += 1
@@ -248,17 +265,16 @@ class Firegoby
 
     def photoset_exists(name)
       return true unless @queued_photoset.key?(name)
-      photosets.each do |p|
-        return true if p.title == name
-      end
-      false
+      photosets.any? { |p| p.title == name }
     end
 
     def photosets
-      if @photosets.nil? then
-        @photosets = flickr.photosets.getList
+      @photoset_list_mutex.synchronize do
+        if @photosets.nil? then
+          @photosets = flickr.photosets.getList
+        end
+        @photosets
       end
-      @photosets
     end
 
   def api_key
@@ -282,11 +298,13 @@ class Firegoby
   end
 
   def auth_token
-    unless @flickr.auth.token
-      Launchy.open(@flickr.auth.login_link)
-      STDIN.gets
-      @flickr.auth.getToken
-      @flickr.auth.cache_token
+    @auth_mutex.synchronize do
+      unless @flickr.auth.token
+        Launchy.open(@flickr.auth.login_link)
+        STDIN.gets
+        @flickr.auth.getToken
+        @flickr.auth.cache_token
+      end
     end
   end
 
