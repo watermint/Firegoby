@@ -120,6 +120,7 @@ class Firegoby
     @queue           = Queue.new
     @queued_photoset = {}
     @queued_files    = {}
+    @history         = []
     @upload_count    = 0
     @privacy         = opts[:privacy]
     @tags            = opts[:tags]
@@ -156,12 +157,14 @@ class Firegoby
         each do |f|
       path = "#{dir}/#{f}"
       photoset = define_photoset(path)
+      next if @history.include?(path)
 
       unless photoset.nil?
         enqueue_task(:upload_photo, {
             :photoset_title => photoset,
             :file => path,
         })
+        @history << path
         @queued_files[path] = true
         queued += 1
       end
@@ -176,11 +179,13 @@ class Firegoby
     Dir::entries(dir).delete_if {|x| x.start_with?('.') }.each do |f|
       path = "#{basepath}/#{f}"
       next unless File.size?(path)
-      next if @queued_files.key?(path)
+      next if @queued_files.key?(path) || @history.include?(path)
+
       enqueue_task(:upload_photo, {
         :photoset_title => photoset_name,
         :file           => path,
         })
+      @history << path
       @queued_files[path] = true
       queued += 1
     end
