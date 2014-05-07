@@ -81,7 +81,7 @@ class Flickr
 	
 	def initialize(token_cache=nil,api_key=API_KEY,
 			shared_secret=SHARED_SECRET,
-			endpoint='http://www.flickr.com/services/xmlrpc/')
+			endpoint='https://api.flickr.com/services/xmlrpc/')
 		@async = false
 		@caching = true
 		@auth_mode = true
@@ -91,7 +91,7 @@ class Flickr
 		@endpoint=endpoint
 		proto,host,port,path,user,pass=parse_url(@endpoint)
 		raise ProtoUnknownError.new("Unhandled protocol '#{proto}'") if
-			proto.downcase != 'http'
+			proto.downcase != 'https'
 		@client=XMLRPC::Client.new(host,path,port)
 		clear_cache
 	end
@@ -388,7 +388,7 @@ class Flickr::Photo
 	def contexts() @contexts ||= @flickr.photos.getAllContexts(self) end
 
 	def url(size=nil)
-		base = 'http://static.flickr.com'
+		base = 'https://static.flickr.com'
 		ext = (size == 'o') ? self.originalformat : 'jpg'
 		return size ?
 			"#{base}/#@server/#{@id}_#{@secret}_#{size}.#{ext}" :

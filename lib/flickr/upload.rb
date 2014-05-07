@@ -117,7 +117,8 @@ class Flickr::Upload < Flickr::APIBase
 		headers = {"Content-Type" =>
 			"multipart/form-data; boundary=" + form.boundary}
 
-		http = Net::HTTP.new('www.flickr.com', 80)
+		http = Net::HTTP.new('api.flickr.com', 443)
+                http.use_ssl = true
 #		http.read_timeout = 900 # 15 minutes max upload time
 		tries = 3
 		begin

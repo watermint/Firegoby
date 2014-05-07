@@ -24,7 +24,7 @@ class Flickr::Auth < Flickr::APIBase
 		args={ 'api_key' => @flickr.api_key, 'perms' => perms}
 		args['frob'] = self.frob
 		args['api_sig'] = @flickr.sign(args)
-		return "http://flickr.com/services/auth/?"+
+		return "https://api.flickr.com/services/auth/?"+
 			args.to_a.map{|arr| arr.join('=')}.join('&')
 	end
 
