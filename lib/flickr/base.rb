@@ -92,7 +92,7 @@ class Flickr
 		proto,host,port,path,user,pass=parse_url(@endpoint)
 		raise ProtoUnknownError.new("Unhandled protocol '#{proto}'") if
 			proto.downcase != 'https'
-		@client=XMLRPC::Client.new(host,path,port)
+		@client=XMLRPC::Client.new(host,path,443, nil, nil, nil, nil, true)
 		clear_cache
 	end
 
@@ -191,7 +191,7 @@ class Flickr
 		hostport = $2
 		user,pass = userpass.to_s.split(':',2)
 		host,port = hostport.to_s.split(':',2)
-		port = port ? port.to_i : 80
+		port = port ? port.to_i : 443
 
 		return proto,host,port,path,user,pass
 	end
@@ -740,7 +740,7 @@ class Flickr::PhotoSet < Array
 
 	def url
 		owner = @owner || @flickr.photosets.getInfo(self).owner
-		return "http://www.flickr.com/photos/#{owner}/sets/#{@id}"
+		return "https://www.flickr.com/photos/#{owner}/sets/#{@id}"
 	end
 
 	def primary() @primary ||= @flickr.photos.getInfo(@primary_id) end
